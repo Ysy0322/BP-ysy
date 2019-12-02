@@ -53,7 +53,7 @@ if __name__ == '__main__':
     bp.setup(1, 1, [10,10])
     # 初始化学习率，训练次数
     learn = 0.08
-    times = 3000
+    times = 5000
     train, train_res = get_train()
 
     back_propagate(train, train_res, learn, times)

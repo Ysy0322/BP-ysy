@@ -8,18 +8,42 @@ import BP0_basic
 
 
 def softmax(x):
-    return numpy.exp(x) / numpy.sum(numpy.exp(x), axis=0)
+    """
+    Compute the softmax function for each row of the input x.
+
+    Arguments:
+    x -- A N dimensional vector or M x N dimensional numpy matrix.
+
+    Return:
+    x -- You are allowed to modify x in-place
+    """
+    orig_shape = x.shape
+
+    if len(x.shape) > 1:
+        # Matrix
+        exp_minmax = lambda x: numpy.exp(x - numpy.max(x))
+        denom = lambda x: 1.0 / numpy.sum(x)
+        x = numpy.apply_along_axis(exp_minmax, 1, x)
+        denominator = numpy.apply_along_axis(denom, 1, x)
+
+        if len(denominator.shape) == 1:
+            denominator = denominator.reshape((denominator.shape[0], 1))
+
+        x = x * denominator
+    else:
+        # Vector
+        x_max = numpy.max(x)
+        x = x - x_max
+        numerator = numpy.exp(x)
+        denominator = 1.0 / numpy.sum(numerator)
+        x = numerator.dot(denominator)
+
+    assert x.shape == orig_shape
+    return x
 
 
 def sigmoid(x):
     return 1 / 1 + numpy.exp(-x)
-
-
-# 测试结果
-scores = [3.0, 1.0, 0.2]
-
-
-# print(softmax(scores))
 
 
 class BPNetwork:
@@ -44,6 +68,10 @@ class BPNetwork:
         self.input_b = []
         # 隐藏层到输出层的Bias
         self.output_b = []
+        # 隐藏层到输出层的delta
+        self.output_delta = []
+        # 输入层到隐藏层的delta
+        self.input_delta = []
 
     '''
     初始化神经网络的结构，一层隐藏层
@@ -57,8 +85,10 @@ class BPNetwork:
         self.hidden_result = [0.0] * hidden_size
         self.input_w = BP0_basic.init_weight(input_n, hidden_size)
         self.output_w = BP0_basic.init_weight(hidden_size, output)
-        self.input_b = BP0_basic.init_bias(input_n)
-        self.output_b = BP0_basic.init_bias(hidden_size)
+        self.input_b = BP0_basic.init_bias(hidden_size)
+        self.output_b = BP0_basic.init_bias(output)
+        self.input_delta = [0.0] * self.input_n
+        self.output_delta = [0.0] * self.hidden_set
 
     '''
     一次向前传播
@@ -66,8 +96,10 @@ class BPNetwork:
 
     def forward_propagate(self, input_cells):
         # 输入层到隐藏层
-        self.input_cells = input_cells
-        print(self.input_cells)
+        self.input_cells = [0.0] * self.input_n
+        for i in range(len(input_cells)):
+            self.input_cells[i] = input_cells[i]
+        # print(self.input_cells)
         for i in range(self.hidden_set):
             for w in range(self.input_n):
                 self.hidden_result[i] = sigmoid(self.input_w[w][i] * self.input_cells[w])
@@ -75,6 +107,8 @@ class BPNetwork:
         for i in range(self.output_m):
             for w in range(self.hidden_set):
                 self.output_cells[i] = sigmoid(self.output_w[w][i] * self.hidden_result[i])
+
+        self.output_cells = softmax(numpy.array(self.output_cells))
 
         return self.output_cells[:]
 
@@ -86,18 +120,26 @@ class BPNetwork:
         # 向前传播
         self.forward_propagate(input_cells)
 
-        # 计算误差
+        # 计算误差,delta
         output_error = numpy.array(self.output_cells) - numpy.array(target)
         hidden_error = numpy.dot(numpy.array(self.output_w), output_error)
+        for i in range(self.output_m):
+            self.output_delta[i] = output_error[i] * self.output_cells[i] * (1 - numpy.array(self.output_cells[i]))
+        for i in range(self.hidden_set):
+            self.input_delta[i] = hidden_error[i] * self.hidden_result[i] * (1 - numpy.array(self.hidden_result[i]))
 
-        # 更新input_w,output_w
-        self.output_w += learn * numpy.dot((numpy.array(output_error) * numpy.array(self.output_cells) * (1.0 - numpy.array(self.output_cells))),
-                                           numpy.transpose(self.hidden_result))
-
-        self.input_w += learn * numpy.dot((numpy.array(hidden_error) * numpy.array(self.hidden_result) * (1.0 - numpy.array(self.hidden_result))),
-                                          numpy.transpose(inputs))
-
-        # 更新input_b,output_b
+        # 更新input_w,output_w,input_b,output_b
+        for i in range(self.hidden_set):
+            for j in range(self.output_m):
+                self.output_w[i][j] += learn * self.output_delta[j] * self.hidden_result[i]
+                self.output_b[j] += learn * self.output_delta[j]
+        for i in range(self.input_n):
+            for j in range(self.hidden_set):
+                self.input_w[i][j] += learn * self.input_delta[j] * self.input_cells[i]
+                self.input_b[j] += learn * self.input_delta[j]
+        #
+        # self.input_w += learn * numpy.multiply(numpy.array(self.input_delta) * numpy.array(self.input_cells))
+        # self.output_b += numpy.multiply(learn, self.input_delta)
 
     '''
     训练
@@ -107,6 +149,15 @@ class BPNetwork:
         for i in range(times):
             self.back_propagate(input_cells, target, learn)
 
+    def test(self, word_test, res_test):
+        error = 0
+        for i in range(len(word_test)):
+            predicate = bp.forward_propagate(word_test[i])
+            label = numpy.argmax(predicate)
+            if label == res_test[i]:
+                error += 0
+            error += 1
+        return error/len(word_test)
 
 '''
 测试
@@ -118,128 +169,20 @@ if __name__ == '__main__':
     输入层 28 * 28 = 784
     输出层 12
     '''
-    bp.setup(784, 12, 100)
+    bp.setup(784, 12, 50)
     # 初始化学习率，训练次数
     learn = 0.1
-    times = 100
+    times = 2
     word_train, word_test, res_train, res_test = utils.get_train_data()
     print("训练开始: " + str(datetime.datetime.now()))
     for w in range(12):
         for i in range(len(word_train[w])):
             bp.train(word_train[w][i], res_train[w][i], learn, times)
     print("训练结束: " + str(datetime.datetime.now()))
+
+    print("测试开始: " + str(datetime.datetime.now()))
     error = 0
-    for w in 12:
-        for i in range(len(word_test[w])):
-            predicate = bp.forward_propagate(word_test[w][i])
-            label = numpy.argmax(predicate)
-            if label == res_test[w][i]:
-                error += 0
-            error += 1
-
+    for w in range(12):
+        error += bp.test(word_test[w])
     print("测试集的正确率为: ")
-    print(1 - error / (12 * len(word_test)))
-
-
-class neuralNetwork:
-    # initialise the neural network
-    def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):
-        # set number of nodes in each input,hidden,output layer
-        self.inodes = inputnodes
-        self.hnodes = hiddennodes
-        self.onodes = outputnodes
-        # learning rate
-        self.lr = learningrate
-
-        # link weight matrices ,wih and who
-        # weight inside the arrays are w_i_j, where link is from node i to node j in the next layer
-        # w11 w21
-        # w12 w22 etc
-        self.wih = (numpy.random.normal(0.0, pow(self.hnodes, -0.5), (self.hnodes, self.inodes)))
-        self.who = (numpy.random.normal(0.0, pow(self.onodes, -0.5), (self.onodes, self.hnodes)))
-
-        # activation function is the sigmoid function
-        self.activation_function = lambda x: scipy.special.expit(x)
-
-        pass
-
-    # train the neural network
-    def train(self, inputs_list, targets_list):
-        # convert inputs list to 2d array
-        inputs = numpy.array(inputs_list, ndmin=2).T
-        targets = numpy.array(targets_list, ndmin=2).T
-
-        # calculate signals into hidden layer
-        hidden_inputs = numpy.dot(self.wih, inputs)
-        # calculate the signals emerging from hidden layer
-        hidden_outputs = self.activation_function(hidden_inputs)
-
-        # calculate signals into final output layer
-        final_inputs = numpy.dot(self.who, hidden_outputs)
-        # calculate the signals emerging from final output layer
-        final_outputs = self.activation_function(final_inputs)
-
-        # output layer error is the (target-actual)
-        output_errors = targets - final_outputs
-        # hidden layer error is the output_errors,split by weights,recombined at hidden nodes
-        hidden_errors = numpy.dot(self.who.T, output_errors)
-
-        # update the weights for the links between the hidden and output layers
-        self.who += self.lr * numpy.dot((output_errors * final_outputs * (1.0 - final_outputs)),
-                                        numpy.transpose(hidden_outputs))
-
-        # update the weights for the links between the input and hidden layers
-        self.wih += self.lr * numpy.dot((hidden_errors * hidden_outputs * (1.0 - hidden_outputs)),
-                                        numpy.transpose(inputs))
-
-        pass
-
-    # query the neural network
-    def query(self, inputs_list):
-        # convert inputs list to 2d array
-        inputs = numpy.array(inputs_list, ndmin=2).T
-
-        # calculate signals into hidden layer
-        hidden_inputs = numpy.dot(self.wih, inputs)
-        # calculate the signals emerging from hidden layer
-        hidden_outputs = self.activation_function(hidden_inputs)
-
-        # calculate signals into final output layer
-        final_inputs = numpy.dot(self.who, hidden_outputs)
-        # calculate the signals emerging from final output layer
-        final_outputs = self.activation_function(final_inputs)
-
-        return final_outputs
-
-
-input_nodes = 784
-hidden_nodes = 200
-output_nodes = 10
-
-# learning rate is 0.3
-learning_rate = 0.1
-
-# create instance of neural network
-n = neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
-
-# train the neural network
-
-# load the mnist training data csv file into a list
-training_data_file = open("mnist_dataset/mnist_train.csv", 'r')
-training_data_list = training_data_file.readlines()
-training_data_file.close()
-
-# epochs is the number of times the training data set is used for training
-epochs = 5
-for e in range(epochs):
-    # go through all records in the training data set
-    for record in training_data_list:
-        all_values = record.split(',')
-        # scale and shift the inputs
-        inputs = (numpy.asfarray(all_values[1:]) / 255.0 * 0.99) + 0.01
-        # create the target output values (all 0.01, except the desired label which is 0.99)
-        targets = numpy.zeros(output_nodes) + 0.01
-        # all_values[0] is the target label for this record
-        targets[int(all_values[0])] = 0.99
-        n.train(inputs, targets)
-        pass
+    print(1 - error / 12)

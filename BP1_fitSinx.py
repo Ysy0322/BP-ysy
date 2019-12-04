@@ -1,9 +1,9 @@
 import numpy as np
 import math
 from matplotlib import pylab
-import BP
+import BP0_basic
 
-bp = BP.BPNetwork()
+bp = BP0_basic.BPNetwork()
 
 
 # 拟合sinx函数的训练集
@@ -33,8 +33,7 @@ repeat：
     反向传播，计算δ, 更新weight和bias
 '''
 
-
-def back_propagate(input, expects, learn=0.05, limit=10000):
+def back_propagate_train(input, expects, learn=0.05, limit=10000):
     for j in range(limit):
         for i in range(len(input)):
             bp.forward_propagate(input[i])
@@ -43,6 +42,9 @@ def back_propagate(input, expects, learn=0.05, limit=10000):
             bp.update_bias(learn)
 
 
+'''
+测试
+'''
 if __name__ == '__main__':
     '''
     初始化神经网络的结构
@@ -50,13 +52,13 @@ if __name__ == '__main__':
     根据经验公式：
     h = (n+m)
     '''
-    bp.setup(1, 1, [10,10])
+    bp.setup(1, 1, [10, 10])
     # 初始化学习率，训练次数
     learn = 0.08
     times = 5000
     train, train_res = get_train()
 
-    back_propagate(train, train_res, learn, times)
+    back_propagate_train(train, train_res, learn, times)
 
     test, test_res = get_test()
     average_loss, predicate_res = bp.get_average_loss(test, test_res)

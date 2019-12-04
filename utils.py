@@ -2,8 +2,8 @@
 import os
 import numpy
 from PIL import Image
-from pylab import savetxt
 from sklearn.model_selection import train_test_split
+from pylab import savetxt
 
 '''
 读取特定文件夹下的bmp格式图片文件列表
@@ -38,13 +38,13 @@ def get_image_matrix():
         for i in range(620):
             image = numpy.array(Image.open(image_file_matrix[w][i]))
             image_bit_matrix[w][i] = numpy.ndarray.flatten(image)
-        savetxt("word image\\word" + str(1 + w) + '.txt', image_bit_matrix[w], fmt="%.0f")
+        # savetxt("word image\\word" + str(1 + w) + '.txt', image_bit_matrix[w], fmt="%0i")
     return image_bit_matrix
 
 
 # get_image_matrix()
 
-x = [[1, 1, 0], [1, 0, 1], [1, 0, 0], [1, 1, 1]]
+x = [[[1, 1, 0], [1, 0, 1], [1, 0, 0], [1, 1, 1]], [[0, 1, 0], [0, 0, 1], [0, 0, 0]], ]
 y = [1, 1, 1, 1]
 
 
@@ -67,11 +67,23 @@ def get_train_data():
     for w in range(12):
         res_total_matrix[w] = [w] * 620
         word_train[w], word_test[w], res_train[w], res_test[w] = split(image_matrix[w], res_total_matrix[w])
+    x_train, x_test, y_train, y_test = split(image_matrix[0], res_total_matrix[0])
+    # print("words for train:")
+    # print(x_train)
+    # print("words for test:")
+    # print(x_test)
+    # print("res for train:")
+    # print(y_train)
+    # print("res for test:")
+    # print(y_train)
+    # savetxt()
     return word_train, word_test, res_train, res_test
 
+
+get_train_data()
 # if __name__ == '__main__':
 #     train_data, train_label, test_data, test_label = get_data()
-#     savetxt("train_data", train_data, fmt="%.0f")
-#     savetxt("train_label", train_label, fmt="%.0f")
-#     savetxt("test_data", test_data, fmt="%.0f")
-#     savetxt("test_label", test_label, fmt="%.0f")
+#     savetxt("train_data", train_data, fmt="&.0i")
+#     savetxt("train_label", train_label, fmt="&.0i")
+#     savetxt("test_data", test_data, fmt="&.0i")
+#     savetxt("test_label", test_label, fmt="&.0i")

@@ -149,15 +149,16 @@ class BPNetwork:
         for i in range(times):
             self.back_propagate(input_cells, target, learn)
 
-    def test(self, word_test, res_test):
+    def test(self, word_test, w):
         error = 0
         for i in range(len(word_test)):
             predicate = bp.forward_propagate(word_test[i])
             label = numpy.argmax(predicate)
-            if label == res_test[i]:
+            if label == w:
                 error += 0
             error += 1
-        return error/len(word_test)
+        return error / len(word_test)
+
 
 '''
 测试
@@ -183,6 +184,8 @@ if __name__ == '__main__':
     print("测试开始: " + str(datetime.datetime.now()))
     error = 0
     for w in range(12):
-        error += bp.test(word_test[w])
+        error += bp.test(word_test[w], w)
+    print("测试结束: " + str(datetime.datetime.now()))
+
     print("测试集的正确率为: ")
     print(1 - error / 12)

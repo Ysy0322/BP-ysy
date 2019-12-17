@@ -1,76 +1,40 @@
 import datetime
-
 import numpy
+import utils
 import scipy
 
-import utils
-import BP0_basic
 
-
-def softmax(x):
-    """
-    Compute the softmax function for each row of the input x.
-
-    Arguments:
-    x -- A N dimensional vector or M x N dimensional numpy matrix.
-
-    Return:
-    x -- You are allowed to modify x in-place
-    """
-    orig_shape = x.shape
-
-    if len(x.shape) > 1:
-        # Matrix
-        exp_minmax = lambda x: numpy.exp(x - numpy.max(x))
-        denom = lambda x: 1.0 / numpy.sum(x)
-        x = numpy.apply_along_axis(exp_minmax, 1, x)
-        denominator = numpy.apply_along_axis(denom, 1, x)
-
-        if len(denominator.shape) == 1:
-            denominator = denominator.reshape((denominator.shape[0], 1))
-
-        x = x * denominator
-    else:
-        # Vector
-        x_max = numpy.max(x)
-        x = x - x_max
-        numerator = numpy.exp(x)
-        denominator = 1.0 / numpy.sum(numerator)
-        x = numerator.dot(denominator)
-
-    assert x.shape == orig_shape
-    return x
-
-
-def sigmoid(x):
-    return 1 / 1 + numpy.exp(-x)
+def sigmoid(a):
+    c = numpy.max(a)
+    exp_a = numpy.exp(a - c)  # 溢出对策
+    sum_exp_a = numpy.sum(exp_a)
+    y = exp_a / sum_exp_a
+    return y
 
 
 class BPNetwork:
     def __int__(self):
         # 输入神经元数
         self.input_n = 0
-        # 输入神经元数组
+        # 输入神经元数组 1 * 784 * 1
         self.input_cells = []
         # 输出神经元数
         self.output_m = 0
-        # 输出神经元数组
+        # 输出神经元数组 1 * 12
         self.output_cells = []
         # 隐藏层神经元数
         self.hidden_set = 0
-        # 隐藏层结果
+        # 隐藏层结果 1 * set
         self.hidden_result = []
-        # 输入层到隐藏层权值数组
+        # 输入层到隐藏层权值数组 784 * set
         self.input_w = []
-        # 隐藏层到输出层权值数组
+        # 隐藏层到输出层权值数组 set * 12
         self.output_w = []
-        # 输入层到隐藏层的Bias
+        # 输入层到隐藏层的Bias 1 * set
         self.input_b = []
-        # 隐藏层到输出层的Bias
-        self.output_b = []
-        # 隐藏层到输出层的delta
+        # 隐藏层到输出层的delta 1 * 12
         self.output_delta = []
-        # 输入层到隐藏层的delta
+        # 输入层到隐藏层的delta 1 * set
         self.input_delta = []
 
     '''
@@ -79,14 +43,14 @@ class BPNetwork:
 
     def setup(self, input_n, output, hidden_size):
         self.input_n = input_n
+        self.input_cells = [1.0] * input_n
         self.output_m = output
         self.output_cells = [0.0] * output
         self.hidden_set = hidden_size
         self.hidden_result = [0.0] * hidden_size
-        self.input_w = BP0_basic.init_weight(input_n, hidden_size)
-        self.output_w = BP0_basic.init_weight(hidden_size, output)
-        self.input_b = BP0_basic.init_bias(hidden_size)
-        self.output_b = BP0_basic.init_bias(output)
+        self.input_w = utils.generate_random(input_n, hidden_size)
+        self.output_w = utils.generate_random(hidden_size, output)
+        self.input_b = numpy.random.random(hidden_size)
         self.input_delta = [0.0] * self.input_n
         self.output_delta = [0.0] * self.hidden_set
 
@@ -94,98 +58,114 @@ class BPNetwork:
     一次向前传播
     '''
 
-    def forward_propagate(self, input_cells):
-        # 输入层到隐藏层
-        self.input_cells = [0.0] * self.input_n
-        for i in range(len(input_cells)):
-            self.input_cells[i] = input_cells[i]
-        # print(self.input_cells)
-        for i in range(self.hidden_set):
-            for w in range(self.input_n):
-                self.hidden_result[i] = sigmoid(self.input_w[w][i] * self.input_cells[w])
+    def softmax(self, x):
+        x = x - numpy.max(x)
+        result = numpy.exp(x) / numpy.sum(numpy.exp(x))
+        return result
+
+    def activation_function(self, x):
+        return scipy.special.expit(x)
+
+    def forward_propagate(self, train):
+        # 第一层到隐藏层
+        self.input_cells = numpy.array(train)
+        self.input_cells.shape = (784, 1)
+        self.hidden_result = numpy.dot(numpy.transpose(self.input_w), self.input_cells)
+
+        self.input_b.shape = (self.hidden_set, 1)
+        self.hidden_result = self.activation_function(self.hidden_result + self.input_b)
+
         # 隐藏层到输出层
-        for i in range(self.output_m):
-            for w in range(self.hidden_set):
-                self.output_cells[i] = sigmoid(self.output_w[w][i] * self.hidden_result[i])
+        self.output_cells = numpy.dot(numpy.transpose(self.output_w), self.hidden_result)
+        self.output_cells = self.softmax(self.output_cells)
 
-        self.output_cells = softmax(numpy.array(self.output_cells))
+        return self.output_cells
 
-        return self.output_cells[:]
+    def back_propagate(self, target, learn):
+        target = numpy.array(target)
+        target.shape = (12, 1)
+        # 输出层到隐藏层
+        output_error = target - self.output_cells
+        self.output_delta = numpy.array(output_error * numpy.multiply(self.output_cells, (1 - self.output_cells)))
+        self.output_delta.shape = (12, 1)
+        self.hidden_result.shape = (self.hidden_set, 1)
+        self.output_w += learn * numpy.dot(self.hidden_result, self.output_delta.T)
+        # 隐藏层到输入层
+        hidden_error = numpy.dot(self.output_w, output_error)
+        hidden_error.shape = (self.hidden_set, 1)
+        self.input_delta = hidden_error * self.hidden_result * (1 - self.hidden_result)
+        self.input_delta = numpy.array(self.input_delta)
+        self.input_delta.shape = (self.hidden_set, 1)
+        self.input_cells.shape = (784, 1)
+        self.input_b.shape = (self.hidden_set, 1)
+        self.input_w += learn * numpy.dot(self.input_cells, self.input_delta.T)
+        self.input_b += learn * self.input_delta
 
     '''
-    包含向前传播，计算误差，更新weight和bias的一次反向传播
+    计算正确率
     '''
 
-    def back_propagate(self, input_cells, target, learn):
-        # 向前传播
-        self.forward_propagate(input_cells)
-
-        # 计算误差,delta
-        output_error = numpy.array(self.output_cells) - numpy.array(target)
-        hidden_error = numpy.dot(numpy.array(self.output_w), output_error)
-        for i in range(self.output_m):
-            self.output_delta[i] = output_error[i] * self.output_cells[i] * (1 - numpy.array(self.output_cells[i]))
-        for i in range(self.hidden_set):
-            self.input_delta[i] = hidden_error[i] * self.hidden_result[i] * (1 - numpy.array(self.hidden_result[i]))
-
-        # 更新input_w,output_w,input_b,output_b
-        for i in range(self.hidden_set):
-            for j in range(self.output_m):
-                self.output_w[i][j] += learn * self.output_delta[j] * self.hidden_result[i]
-                self.output_b[j] += learn * self.output_delta[j]
-        for i in range(self.input_n):
-            for j in range(self.hidden_set):
-                self.input_w[i][j] += learn * self.input_delta[j] * self.input_cells[i]
-                self.input_b[j] += learn * self.input_delta[j]
-        #
-        # self.input_w += learn * numpy.multiply(numpy.array(self.input_delta) * numpy.array(self.input_cells))
-        # self.output_b += numpy.multiply(learn, self.input_delta)
+    def calculate_correct(self, train_data, train_label):
+        count = 0
+        for i in range(len(train_data)):
+            predicate = self.forward_propagate(train_data[i].astype(int))
+            label = numpy.argmax(predicate)
+            if label == train_label[i].index(1):
+                count += 1
+        return count / len(train_data)
 
     '''
     训练
+    每2次打印一次正确率
     '''
 
-    def train(self, input_cells, target, learn, times):
-        for i in range(times):
-            self.back_propagate(input_cells, target, learn)
+    def train(self, times, train_data, train_label, learn):
+        i = 1
+        train_corrects = []
+        test_corrects = []
+        while i <= times:
+            for w in range(len(train_data)):
+                self.forward_propagate(train_data[w])
+                self.back_propagate(train_label[w], learn=learn)
 
-    def test(self, word_test, w):
-        error = 0
-        for i in range(len(word_test)):
-            predicate = bp.forward_propagate(word_test[i])
-            label = numpy.argmax(predicate)
-            if label == w:
-                error += 0
-            error += 1
-        return error / len(word_test)
+            # j = i
+            # if j % 2 == 0 or j == times:
+            print("第 " + str(i) + " 次" + "反向传播训练")
+            train_correct = self.calculate_correct(train_data, train_label)
+            train_corrects.append(train_correct)
+            print("训练集正确率为: " + str(train_correct))
+            test_correct = self.calculate_correct(word_test, res_test)
+            test_corrects.append(test_correct)
+            print("测试集正确率为: " + str(test_correct))
+
+            i += 1
+        return train_corrects, test_corrects
 
 
-'''
-测试
-'''
+word_train, word_test, res_train, res_test = utils.get_data()
+train, train_label = utils.get_all_data()
+
 bp = BPNetwork()
+
 if __name__ == '__main__':
     '''
     初始化神经网络的结构
     输入层 28 * 28 = 784
     输出层 12
     '''
-    bp.setup(784, 12, 50)
+    hid = 100
+    bp.setup(784, 12, hid)
     # 初始化学习率，训练次数
-    learn = 0.1
-    times = 2
-    word_train, word_test, res_train, res_test = utils.get_train_data()
-    print("训练开始: " + str(datetime.datetime.now()))
-    for w in range(12):
-        for i in range(len(word_train[w])):
-            bp.train(word_train[w][i], res_train[w][i], learn, times)
-    print("训练结束: " + str(datetime.datetime.now()))
-
-    print("测试开始: " + str(datetime.datetime.now()))
-    error = 0
-    for w in range(12):
-        error += bp.test(word_test[w], w)
-    print("测试结束: " + str(datetime.datetime.now()))
-
-    print("测试集的正确率为: ")
-    print(1 - error / 12)
+    learn = 0.01
+    times = 20
+    print("训练开始: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
+    print("隐藏层节点数: " + str(hid) + '\n' +
+          "学习率: " + str(learn) + '\n' +
+          "训练次数: " + str(times))
+    train_corrects, test_corrects = bp.train(times, word_train, res_train, learn)
+    print("训练结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
+    print("测试开始: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
+    count = bp.calculate_correct(word_test, res_test)
+    print("测试结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
+    print("测试集的正确率为: " + str(count))
+    utils.draw(train_corrects, test_corrects, hid, learn)

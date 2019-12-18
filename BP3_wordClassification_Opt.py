@@ -48,6 +48,10 @@ class BPNetwork:
         self.input_delta = [0.0] * self.input_n
         self.output_delta = [0.0] * self.hidden_set
 
+    '''
+    一次向前传播
+    '''
+
     def softmax(self, x):
         x = x - numpy.max(x)
         result = numpy.exp(x) / numpy.sum(numpy.exp(x))
@@ -55,10 +59,6 @@ class BPNetwork:
 
     def activation_function(self, x):
         return scipy.special.expit(x)
-
-    '''
-    一次向前传播
-    '''
 
     def forward_propagate(self, train):
         # 第一层到隐藏层
@@ -72,7 +72,7 @@ class BPNetwork:
         # 隐藏层到输出层
         self.output_cells = numpy.dot(numpy.transpose(self.output_w), self.hidden_result)
         self.output_b.shape = (self.output_m, 1)
-        self.output_cells = self.softmax(self.output_cells + self.output_b)
+        self.output_cells = self.activation_function(self.output_cells + self.output_b)
 
         return self.output_cells
 
@@ -127,15 +127,18 @@ class BPNetwork:
                 self.forward_propagate(train_data[w])
                 self.back_propagate(train_label[w], learn=learn)
 
+            # j = i
+            # if j % 2 == 0 or j == times:
             print("第 " + str(i) + " 次" + "反向传播训练")
             train_correct, train_label_predict = self.calculate_correct(train_data, train_label)
             train_corrects.append(train_correct)
             '''
-            print("训练集正确率为: " + str(train_correct))
-            test_correct, test_label_predict = self.calculate_correct(word_test, res_test)
-            test_corrects.append(test_correct)
-            print("测试集正确率为: " + str(test_correct))            
+            for test
             '''
+            # print("训练集正确率为: " + str(train_correct))
+            # test_correct, test_label_predict = self.calculate_correct(word_test, res_test)
+            # test_corrects.append(test_correct)
+            # print("测试集正确率为: " + str(test_correct))
 
             i += 1
         return train_corrects, test_corrects
@@ -157,7 +160,7 @@ if __name__ == '__main__':
     bp.setup(784, 12, hid)
     # 初始化学习率，训练次数
     learn = 0.01
-    times = 130
+    times = 150
     print("训练开始: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
     print("隐藏层节点数: " + str(hid) + '\n' +
           "学习率: " + str(learn) + '\n' +
@@ -172,7 +175,7 @@ if __name__ == '__main__':
     for test
     '''
     # count, predict_label = bp.calculate_correct(word_test, res_test)
-    # utils.save_predict(predict_label, "out\\predict_2")
+    # utils.save_predict(predict_label, "out\\predict_1")
 
     print("测试结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
     # print("测试集的正确率为: " + str(count))

@@ -58,6 +58,24 @@ def get_image_matrix():
 
 
 '''
+读取测试文件夹下面的所有图片
+'''
+
+
+def get_test_image_matrix():
+    image_file_matrix = get_file_list("test")
+    image_bit_matrix = [0.0] * len(image_file_matrix)
+    for i in range(len(image_file_matrix)):
+        image = numpy.array(Image.open(image_file_matrix[i]))
+        image_bit_matrix[i] = numpy.ndarray.flatten(image)
+        numpy.array(image.reshape(1, 784))
+
+    test = image_bit_matrix
+
+    return test
+
+
+'''
 分割训练集和测试集
 '''
 
@@ -78,9 +96,9 @@ def get_all_data():
         for y in range(12):
             train[i] = image_matrix[y][x]
             train[i] = numpy.array(train[i]).astype(int)
-            label[y] = y
-            train_label[i] = label
             label = [0.0] * 12
+            label[y] = 1
+            train_label[i] = label
             i += 1
 
     return train, train_label
@@ -141,7 +159,8 @@ def get_data(scale=0.20):
 def draw(train_corrects, test_corrects, hid, learn):
     x = numpy.arange(1, len(train_corrects) + 1, 1)
     pylab.plot(x, train_corrects, label="train correction ")
-    pylab.plot(x, test_corrects, label="test correction")
+    if len(test_corrects) != 0:
+        pylab.plot(x, test_corrects, label="test correction")
     pylab.xlabel("train times")
     pylab.ylabel("correction")
     pylab.title("hid nodes: " + str(hid) + ", learn rate: " + str(learn))
@@ -150,11 +169,27 @@ def draw(train_corrects, test_corrects, hid, learn):
 
 
 '''
+预测结果写入文件
+'''
+'''
+predict_label = []
+predict_label.append(1)
+predict_label.append(2)
+predict_label.append(3)
+save_predict(predict_label, "out\\test_predict")
+'''
+
+
+def save_predict(predict_label, path):
+    savetxt(path, predict_label, fmt="%0i")
+
+
+'''
 数据写入文件
 '''
 
 
-def write_data():
+def write_train_data():
     # word_train, word_test, res_train, res_test = get_data()
     train, train_label = get_all_data()
     savetxt("split train&test\\train", train, fmt="%0i")
@@ -165,4 +200,4 @@ def write_data():
     # savetxt("split train&test\\res_test", res_test, fmt="%0i")
 
 
-write_data()
+write_train_data()

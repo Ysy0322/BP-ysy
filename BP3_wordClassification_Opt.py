@@ -179,4 +179,4 @@ if __name__ == '__main__':
 
     print("测试结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
     # print("测试集的正确率为: " + str(count))
-    utils.draw(train_corrects, test_corrects, hid, learn)
+    # utils.draw(train_corrects, test_corrects, hid, learn)

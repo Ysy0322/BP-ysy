@@ -75,6 +75,8 @@ def get_test_image_matrix():
     return test
 
 
+# savetxt("test\\test_data", get_test_image_matrix(), fmt="%0i")
+
 '''
 分割训练集和测试集
 '''
@@ -200,4 +202,4 @@ def write_train_data():
     # savetxt("split train&test\\res_test", res_test, fmt="%0i")
 
 
-write_train_data()
+# write_train_data()

@@ -180,7 +180,7 @@ if __name__ == '__main__':
     for test
     '''
     # count, predict_label = bp.calculate_correct(word_test, res_test)
-    # utils.save_predict(predict_label, "out\\predict_1")
+    # utils.save_predict(predict_label, "out\\predict_2")
 
     print("测试结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
     # print("测试集的正确率为: " + str(count))

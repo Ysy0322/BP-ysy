@@ -166,8 +166,13 @@ if __name__ == '__main__':
     train_corrects, test_corrects = bp.train(times, train, train_label, learn)
     print("训练结束: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
     print("测试开始: " + datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
-    predict = bp.forward_propagate(test)
-    utils.save_predict(predict, "out\\predict_2")
+    predict = []
+    for i in range(len(test)):
+        res = bp.forward_propagate(test[i])
+        label = numpy.argmax(res)
+        predict.append(label+1)
+    utils.save_predict(predict, "out\\predict_1")
+
     '''
     for test
     '''

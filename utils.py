@@ -29,7 +29,9 @@ def generate_random(x, y):
 
 
 def get_file_list(path):
-    return [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.bmp')]
+    files = os.listdir(path)
+    files.sort(key=lambda x: int(x.split('.')[0]))
+    return [os.path.join(path, f) for f in files if f.endswith('.bmp')]
 
 
 '''
@@ -38,7 +40,6 @@ image_bit_matrix = [0.0] * 12 文字图片bit的矩阵
 image_bit_matrix[w][i]
 是第w个文字的第i个图片的bit矩阵
 '''
-
 
 def get_image_matrix():
     image_file_matrix = [0.0] * 12
@@ -200,6 +201,5 @@ def write_train_data():
     # savetxt("split train&test\\word_test", word_test, fmt="%0i")
     # savetxt("split train&test\\res_train", res_train, fmt="%0i")
     # savetxt("split train&test\\res_test", res_test, fmt="%0i")
-
 
 # write_train_data()

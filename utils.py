@@ -41,6 +41,7 @@ image_bit_matrix[w][i]
 是第w个文字的第i个图片的bit矩阵
 '''
 
+
 def get_image_matrix():
     image_file_matrix = [0.0] * 12
     image_bit_matrix = [0.0] * 12

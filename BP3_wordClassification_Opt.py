@@ -174,7 +174,7 @@ if __name__ == '__main__':
         res = bp.forward_propagate(test[i])
         label = numpy.argmax(res)
         predict.append(label+1)
-    utils.save_predict(predict, "out\\predict_2")
+    utils.save_predict(predict, "pred.txt")
 
     '''
     for test
